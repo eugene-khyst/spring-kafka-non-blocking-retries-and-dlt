@@ -39,7 +39,8 @@ public class KafkaListenerTest {
     String testKey = "test_key";
     String testData = "test_data";
 
-    kafkaTemplate.send(INPUT_TEST_TOPIC, testKey, testData);
+    kafkaTemplate.executeInTransaction(kt ->
+        kt.send(INPUT_TEST_TOPIC, testKey, testData));
 
     try (Consumer<String, String> consumer = createConsumer()) {
       kafkaEmbedded.consumeFromAnEmbeddedTopic(consumer, OUTPUT_TEST_TOPIC);
@@ -47,7 +48,7 @@ public class KafkaListenerTest {
       Iterator<ConsumerRecord<String, String>> iterator = records.iterator();
       ConsumerRecord<String, String> record = iterator.next();
 
-      assertEquals(testKey, record.value());
+      assertEquals(testKey, record.key());
       assertEquals(testData, record.value());
       assertFalse(iterator.hasNext());
     }
