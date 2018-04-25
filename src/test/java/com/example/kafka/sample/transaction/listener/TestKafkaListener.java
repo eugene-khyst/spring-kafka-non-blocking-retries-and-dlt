@@ -1,7 +1,7 @@
 package com.example.kafka.sample.transaction.listener;
 
-import com.example.kafka.sample.transaction.model.TestEntity;
-import com.example.kafka.sample.transaction.repository.TestEntityRepository;
+import com.example.kafka.sample.transaction.model.Record;
+import com.example.kafka.sample.transaction.repository.RecordRepository;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +23,7 @@ public class TestKafkaListener {
   private KafkaTemplate<String, String> kafkaTemplate;
 
   @Autowired
-  private TestEntityRepository testEntityRepository;
+  private RecordRepository recordRepository;
 
   @Transactional("chainedKafkaTransactionManager")
   @KafkaListener(topics = INPUT_TEST_TOPIC)
@@ -34,9 +34,9 @@ public class TestKafkaListener {
     LOGGER.info("Forwarded Kafka record to {}: {}, {}",
         OUTPUT_TEST_TOPIC, record.key(), record.value());
 
-    TestEntity testEntity = new TestEntity(record.key(), record.value());
-    testEntityRepository.save(testEntity);
-    LOGGER.info("Persisted TestEntity: {}", testEntity);
+    Record testEntity = new Record(record.key(), record.value());
+    recordRepository.save(testEntity);
+    LOGGER.info("Persisted Record: {}", testEntity);
 
     if ("test_exception".equals(record.key())) {
       throw new RuntimeException("Simulating runtime exception in listener");

@@ -6,17 +6,18 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.example.kafka.sample.transaction.model.TestEntity;
-import com.example.kafka.sample.transaction.repository.TestEntityRepository;
+import com.example.kafka.sample.transaction.model.Record;
+import com.example.kafka.sample.transaction.repository.RecordRepository;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +41,12 @@ public class KafkaListenerTest {
   private KafkaTemplate<String, String> kafkaTemplate;
 
   @Autowired
-  private TestEntityRepository testEntityRepository;
+  private RecordRepository recordRepository;
+
+  @Before
+  public void setUp() {
+    Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"));
+  }
 
   @Test
   public void commitTransaction() throws Exception {
@@ -61,9 +67,9 @@ public class KafkaListenerTest {
       assertFalse(iterator.hasNext());
     }
 
-    Optional<TestEntity> testEntity = testEntityRepository.findById(testKey);
+    Optional<Record> testEntity = recordRepository.findById(testKey);
     assertTrue(testEntity.isPresent());
-    assertEquals(testData, testEntity.get().getDescription());
+    assertEquals(testData, testEntity.get().getValue());
   }
 
   @Test
@@ -80,7 +86,7 @@ public class KafkaListenerTest {
       assertTrue(records.isEmpty());
     }
 
-    Optional<TestEntity> testEntity = testEntityRepository.findById(testKey);
+    Optional<Record> testEntity = recordRepository.findById(testKey);
     assertFalse(testEntity.isPresent());
   }
 
