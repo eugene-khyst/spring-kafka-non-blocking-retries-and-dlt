@@ -26,7 +26,10 @@ repositories {
 
 dependencies {
     compile('org.springframework.boot:spring-boot-starter')
+    compile('org.springframework.boot:spring-boot-starter-data-jpa')
     compile("org.springframework.kafka:spring-kafka:${springKafkaVersion}")
+
+    runtime('com.h2database:h2')
 
     testCompile('org.springframework.boot:spring-boot-starter-test')
     testCompile("org.springframework.kafka:spring-kafka-test:${springKafkaVersion}")
