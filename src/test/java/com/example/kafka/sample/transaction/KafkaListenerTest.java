@@ -2,10 +2,13 @@ package com.example.kafka.sample.transaction;
 
 import static com.example.kafka.sample.transaction.listener.TestKafkaListener.INPUT_TEST_TOPIC;
 import static com.example.kafka.sample.transaction.listener.TestKafkaListener.OUTPUT_TEST_TOPIC;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import com.example.kafka.sample.transaction.listener.TestKafkaListener;
 import com.example.kafka.sample.transaction.model.Record;
 import com.example.kafka.sample.transaction.repository.RecordRepository;
 import java.util.Iterator;
@@ -43,9 +46,16 @@ public class KafkaListenerTest {
   @Autowired
   private RecordRepository recordRepository;
 
+  @Autowired
+  private TestKafkaListener testKafkaListener;
+
   @Before
   public void setUp() {
+    // Kafka is not working with transactions on Windows:
+    // https://issues.apache.org/jira/browse/KAFKA-6052?attachmentOrder=asc
     Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"));
+
+    testKafkaListener.resetCounter();
   }
 
   @Test
@@ -58,7 +68,7 @@ public class KafkaListenerTest {
 
     try (Consumer<String, String> consumer = createConsumer()) {
       kafkaEmbedded.consumeFromAnEmbeddedTopic(consumer, OUTPUT_TEST_TOPIC);
-      ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer);
+      ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, 2_000);
       Iterator<ConsumerRecord<String, String>> iterator = records.iterator();
       ConsumerRecord<String, String> record = iterator.next();
 
@@ -69,7 +79,11 @@ public class KafkaListenerTest {
 
     Optional<Record> testEntity = recordRepository.findById(testKey);
     assertTrue(testEntity.isPresent());
+    assertEquals(testKey, testEntity.get().getKey());
     assertEquals(testData, testEntity.get().getValue());
+
+    // Record was processed
+    assertEquals(1, testKafkaListener.getCounter());
   }
 
   @Test
@@ -88,6 +102,9 @@ public class KafkaListenerTest {
 
     Optional<Record> testEntity = recordRepository.findById(testKey);
     assertFalse(testEntity.isPresent());
+
+    // Record was processed multiple times due to transaction rollback
+    assertThat(testKafkaListener.getCounter(), greaterThan(1));
   }
 
   private Consumer<String, String> createConsumer() {
