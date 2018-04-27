@@ -52,8 +52,10 @@ public class KafkaListenerTest {
   @Before
   public void setUp() {
     // Kafka is not working with transactions on Windows:
-    // https://issues.apache.org/jira/browse/KAFKA-6052?attachmentOrder=asc
+    // https://issues.apache.org/jira/browse/KAFKA-6052
     Assume.assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win"));
+
+    recordRepository.deleteAll();
 
     testKafkaListener.resetCounter();
   }

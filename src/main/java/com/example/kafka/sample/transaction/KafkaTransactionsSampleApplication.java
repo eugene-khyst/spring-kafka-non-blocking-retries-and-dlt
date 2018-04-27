@@ -20,6 +20,13 @@ public class KafkaTransactionsSampleApplication {
   }
 
   @Bean
+  public ChainedKafkaTransactionManager<Object, Object> chainedKafkaTransactionManager(
+      KafkaTransactionManager<Object, Object> kafkaTransactionManager,
+      JpaTransactionManager jpaTransactionManager) {
+    return new ChainedKafkaTransactionManager<>(kafkaTransactionManager, jpaTransactionManager);
+  }
+
+  @Bean
   public ConcurrentKafkaListenerContainerFactory<?, ?> kafkaListenerContainerFactory(
       ConcurrentKafkaListenerContainerFactoryConfigurer configurer,
       ConsumerFactory<Object, Object> kafkaConsumerFactory,
@@ -28,13 +35,6 @@ public class KafkaTransactionsSampleApplication {
     configurer.configure(factory, kafkaConsumerFactory);
     factory.getContainerProperties().setTransactionManager(chainedKafkaTransactionManager);
     return factory;
-  }
-
-  @Bean
-  public ChainedKafkaTransactionManager<Object, Object> chainedKafkaTransactionManager(
-      KafkaTransactionManager<Object, Object> kafkaTransactionManager,
-      JpaTransactionManager jpaTransactionManager) {
-    return new ChainedKafkaTransactionManager<>(kafkaTransactionManager, jpaTransactionManager);
   }
 
   public static void main(String[] args) {
