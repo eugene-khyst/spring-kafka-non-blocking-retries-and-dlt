@@ -1,0 +1,16 @@
+spring:
+  kafka:
+    producer:
+      properties:
+        max:
+          in:
+            flight:
+              requests:
+                per:
+                  connection: 1
+    consumer:
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      group-id: sample-app
+    listener:
+      ack-mode: RECORD
