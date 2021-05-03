@@ -2,10 +2,10 @@
 
 * [Introduction](#0b79795d3efc95b9976c7c5b933afce2)
 * [Simple Blocking Retries](#6fd65dea9dbf381660d8d2d9d6ec86b7)
-* [How to Properly Implement a Back Off Delay?](#10dc1e1086f0a4cb592bdd2602fbb311)
 * [Non-Blocking Retries and Dead Letter Topics](#c6e2fbe6911aecebfba6dbcb786408eb)
     * [Advantages](#f7b2ceb71d1db781418644d81e747782)
     * [Disadvantages](#90843c066e7c75581a9005b9579c151d)
+* [How to Properly Implement a Back Off Delay?](#10dc1e1086f0a4cb592bdd2602fbb311)
 * [Recoverable vs Non-Recoverable Errors](#c02cd12315c42e2e126b7b3693fe7f25)
 * [Topic Naming for Multiple Consumer Groups](#217c291a5e1269cdf1dc29e841471115)
 * [Non-Blocking Retries in Spring Kafka](#7a84b9ef94c90d8886f0216d9da2e66f)
@@ -38,32 +38,6 @@ Retrying at the client side has the following disadvantages
   blocked, as they are re-consumed again and again.
 * Difficulty retrieving metadata about retries. Retrieving metadata about retries such as timestamps
   and the number of retry can be difficult.
-
-## <a name="10dc1e1086f0a4cb592bdd2602fbb311"></a>How to Properly Implement a Back Off Delay?
-
-A naive solution (*not working!*) for implementing a back off delay (delayed message processing) is
-by sleeping the consumer thread till due time (time the message was published to the topic + delay
-time).
-
-This approach doesn't work because you cannot sleep the consumer thread as Kafka will assume that it
-is dead and will perform partition reassignment and pass that message to other consumers.
-
-Kafka has two properties to determine consumer health. The `session.timeout.ms` is used to determine
-if the consumer is active. Since kafka-clients version 0.10.1.0, heartbeats are sent on a background
-thread, so a slow consumer no longer affects that. `max.poll.interval.ms` (default: 5 minutes) is
-used to determine if a consumer appears to be hung (taking too long to process records from the last
-poll). If the time between `poll()` calls exceeds this, the broker revokes the assigned partitions
-and performs a rebalance. For lengthy retry sequences, with back off, this can easily happen.
-
-A Kafka consumer must be paused and resumed instead of sleeping the thread.
-
-The delayed topic consumer must check the timestamp, and if it's not due, pause the consumption
-without committing the offset for that topic's partition. When it is due, the partition consumption
-is resumed, and the message is consumed again.
-
-Delay precision is guaranteed on a best-effort basis. If one message's processing takes longer than
-the next message's back off period for that consumer, the next message's delay will be higher than
-expected. But it is guaranteed that a message will never be processed before its due time.
 
 ## <a name="c6e2fbe6911aecebfba6dbcb786408eb"></a>Non-Blocking Retries and Dead Letter Topics
 
@@ -106,6 +80,32 @@ throughput.
 ### <a name="90843c066e7c75581a9005b9579c151d"></a>Disadvantages
 
 By using non-blocking retries you lose Kafka's ordering guarantees for that topic.
+
+## <a name="10dc1e1086f0a4cb592bdd2602fbb311"></a>How to Properly Implement a Back Off Delay?
+
+A naive solution (*not working!*) for implementing a back off delay (delayed message processing) is
+by sleeping the consumer thread till due time (time the message was published to the topic + delay
+time).
+
+This approach doesn't work because you cannot sleep the consumer thread as Kafka will assume that it
+is dead and will perform partition reassignment and pass that message to other consumers.
+
+Kafka has two properties to determine consumer health. The `session.timeout.ms` is used to determine
+if the consumer is active. Since kafka-clients version 0.10.1.0, heartbeats are sent on a background
+thread, so a slow consumer no longer affects that. `max.poll.interval.ms` (default: 5 minutes) is
+used to determine if a consumer appears to be hung (taking too long to process records from the last
+poll). If the time between `poll()` calls exceeds this, the broker revokes the assigned partitions
+and performs a rebalance. For lengthy retry sequences, with back off, this can easily happen.
+
+A Kafka consumer must be paused and resumed instead of sleeping the thread.
+
+The delayed topic consumer must check the timestamp, and if it's not due, pause the consumption
+without committing the offset for that topic's partition. When it is due, the partition consumption
+is resumed, and the message is consumed again.
+
+Delay precision is guaranteed on a best-effort basis. If one message's processing takes longer than
+the next message's back off period for that consumer, the next message's delay will be higher than
+expected. But it is guaranteed that a message will never be processed before its due time.
 
 ## <a name="c02cd12315c42e2e126b7b3693fe7f25"></a>Recoverable vs Non-Recoverable Errors
 
@@ -178,3 +178,4 @@ the failed record.
    ```bash
    ./gradlew clean test -i -Dkafka.embedded.port=29092
    ```
+
